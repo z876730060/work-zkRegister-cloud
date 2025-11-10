@@ -18,6 +18,7 @@ func register(ctx context.Context, conn *zk.Conn, l *slog.Logger, instance Insta
 	ticker := time.NewTicker(time.Second * 30)
 	defer ticker.Stop()
 
+	servicePath := "/services"
 	parentPath := "/services/" + instance.Name
 	path := parentPath + "/" + instance.ID
 	for {
@@ -40,6 +41,14 @@ func register(ctx context.Context, conn *zk.Conn, l *slog.Logger, instance Insta
 			return
 		case <-ticker.C:
 			l.Info("register instance to zookeeper")
+
+			if exists, _, _ := conn.Exists(servicePath); !exists {
+				_, err := conn.Create(servicePath, nil, 0, zk.WorldACL(zk.PermAll))
+				if err != nil {
+					l.Error("create service path failed", "err", err)
+					continue
+				}
+			}
 
 			exists, _, _ := conn.Exists(parentPath)
 			if !exists {
